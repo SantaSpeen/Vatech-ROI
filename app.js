@@ -1,6 +1,6 @@
 /* ================= Constants ================= */
 const WARRANTY_MONTHS = 120;
-const currency = (v) => `¥${Math.round(v).toLocaleString()}`;
+const currency = (v) => `${Math.round(v).toLocaleString()} ₽`;
 
 /* ================= Utils ================= */
 const formatNumber = (v) =>
@@ -14,26 +14,26 @@ const state = {
   equipmentPrice: 7680000,
 
   income: {
-    pano: { fee: 4020, perDay: 6, days: 24 },
-    ctIns: { fee: 11700, perDay: 3, days: 24 },
-    ctSelf: { fee: 50000, perDay: 1, days: 24 },
-    ceph: { fee: 3000, perDay: 1, days: 24 },
+    pano: { fee: 1200, perDay: 6, days: 24 },
+    ctIns: { fee: 0, perDay: 0, days: 24 },
+    ctSelf: { fee: 2500, perDay: 15, days: 24 },
+    ceph: { fee: 1500, perDay: 1, days: 24 },
     other: 0,
   },
 
   cost: {
     maintenance: 0,
-    consumables: 1000,
-    electricity: 100000,
+    consumables: 500,
+    electricity: 5430,
 
-    rent: 1000000,
-    rentRatio: 10,
+    rent: 0,
+    rentRatio: 0,
 
-    doctor: 1006650,
-    doctorRatio: 5,
+    doctor: 0,
+    doctorRatio: 0,
 
-    staff: 702750,
-    staffRatio: 10,
+    staff: 0,
+    staffRatio: 0,
 
     other: 0,
   }
@@ -132,7 +132,7 @@ function occupancyBlock(title, desc, base, ratio, onBase, onRatio, getResult) {
       <input type="text" inputmode="numeric" class="input">
       <input type="text" inputmode="numeric" class="input text-right">
     </div>
-    <p class="text-xs text-gray-500 result-text">配分後: ${currency(getResult())}</p>
+<p class="text-xs text-gray-500 result-text">После распределения: ${currency(getResult())}</p>
   `;
 
   const inputs = div.querySelectorAll("input");
@@ -140,7 +140,7 @@ function occupancyBlock(title, desc, base, ratio, onBase, onRatio, getResult) {
 
   // 결과 업데이트 함수를 DOM 요소에 저장
   div.updateResult = () => {
-    resultText.textContent = `配分後: ${currency(getResult())}`;
+    resultText.textContent = `После распределения: ${currency(getResult())}`;
   };
 
   // 첫 번째: 금액
@@ -200,21 +200,29 @@ function occupancyBlock(title, desc, base, ratio, onBase, onRatio, getResult) {
 function incomeEditor(key, label, desc) {
   const data = state.income[key];
   const div = document.createElement("div");
-  div.className = "bg-gray-50-box space-y-3";
-  div.innerHTML = `
-    <div>
-      <p class="font-medium text-sm">${label}</p>
-      <p class="text-xs text-gray-500">${desc}</p>
+div.className = "bg-gray-50-box space-y-3";
+div.innerHTML = `
+  <div class="mb-3">
+    <p class="font-medium text-sm">${label}</p>
+    <p class="text-xs text-gray-500">${desc}</p>
+  </div>
+
+  <div class="flex gap-4"> <!-- вместо grid -->
+    <div class="flex flex-col w-1/3">
+      <input class="input" type="text" inputmode="numeric">
+    </div>
+    <div class="flex flex-col w-1/3">
+      <input class="input" type="text" inputmode="numeric">
+    </div>
+    <div class="flex flex-col w-1/3">
+      <input class="input" type="text" inputmode="numeric">
+    </div>
+  </div>
+
       <p class="text-xs text-gray-400 mt-1">
-        単価 × 1日撮影回数 × 月間稼働日数
+        Цена × Съемок в день × Рабочих дней в месяц
       </p>
-    </div>
-    <div class="grid grid-cols-3 gap-2">
-      <input class="input" type="text" inputmode="numeric">
-      <input class="input" type="text" inputmode="numeric">
-      <input class="input" type="text" inputmode="numeric">
-    </div>
-  `;
+`;
 
   const i = div.querySelectorAll("input");
   i[0].value = formatNumber(data.fee);
@@ -267,10 +275,11 @@ function drawChart(income, cost, net) {
   const max = Math.max(income, cost, Math.abs(net));
 
   const data = [
-    { label: "収入", value: income, color: "#9ca3af" },
-    { label: "費用", value: cost, color: "#9ca3af" },
-    { label: "純利益", value: net, color: "#dc2626" },
+    { label: "Доход", value: income, color: "#9ca3af" },
+    { label: "Расходы", value: cost, color: "#9ca3af" },
+    { label: "Чистая прибыль", value: net, color: "#dc2626" },
   ];
+
 
   data.forEach((d, i) => {
     const h = Math.abs(d.value) / max * 160;
@@ -305,7 +314,7 @@ function render() {
   const netProfit = net * (WARRANTY_MONTHS - payback);
 
   $("kpi-net").textContent = currency(net);
-  $("kpi-payback").textContent = `${payback} ヶ月`;
+  $("kpi-payback").textContent = `${payback} месяцев`;
   $("kpi-profit").textContent = currency(netProfit);
 
   $("income-total").textContent = currency(income.total);
@@ -320,20 +329,21 @@ function render() {
 /* ================= Init ================= */
 function init() {
   const incomeWrap = $("income-blocks");
-  incomeWrap.append(
-    incomeEditor("pano","PANO(パノラマ撮影)","パノラマX線撮影による保険収入"),
-    incomeEditor("ctIns","CT(保険)","保険適用CT撮影による収入"),
-    incomeEditor("ctSelf","CT(自費)","インプラント・精密診断等の自費CT撮影"),
-    incomeEditor("ceph","CEPH","矯正用セファロ撮影による収入"),
-    inputBlock("その他収入","紹介料・臨時撮影など",state.income.other,v=>{state.income.other=v;render();})
-  );
+incomeWrap.append(
+  incomeEditor("pano","Панорама","Доход от панорамной рентгенографии"),
+  incomeEditor("ctIns","КТ (по страховке)","Доход от КТ с покрытием страховки"),
+  incomeEditor("ctSelf","КТ (за свой счет)","КТ за свой счет: импланты, точная диагностика и др."),
+  incomeEditor("ceph","Цефалостат","Доход от цефалометрической съемки для ортодонтии"),
+  inputBlock("Прочие доходы","Рекомендации, разовые съемки и др.",state.income.other,v=>{state.income.other=v;render();})
+);
+
 
   const costWrap = $("cost-blocks");
   const costCalc = () => calcCost();
 
-  const rentBlock = occupancyBlock(
-    "家賃配分",
-    "院内設置面積分のみ按分",
+const rentBlock = occupancyBlock(
+  "Распределение аренды",
+  "Распределение только по площади внутри клиники",
     state.cost.rent,
     state.cost.rentRatio,
     v=>{state.cost.rent=v;render();},
@@ -341,9 +351,9 @@ function init() {
     () => costCalc().rent
   );
 
-  const doctorBlock = occupancyBlock(
-    "医師人件費配分",
-    "CT診断・説明にかかる稼働分",
+const doctorBlock = occupancyBlock(
+  "Распределение зарплаты врачей",
+  "Учёт времени на КТ-диагностику и консультации",
     state.cost.doctor,
     state.cost.doctorRatio,
     v=>{state.cost.doctor=v;render();},
@@ -351,9 +361,9 @@ function init() {
     () => costCalc().doctor
   );
 
-  const staffBlock = occupancyBlock(
-    "スタッフ人件費配分",
-    "撮影・運用対応分",
+const staffBlock = occupancyBlock(
+  "Распределение зарплаты персонала",
+  "Учёт времени на съёмку и обслуживание",
     state.cost.staff,
     state.cost.staffRatio,
     v=>{state.cost.staff=v;render();},
@@ -364,15 +374,15 @@ function init() {
   // 배분 블록들을 배열에 저장
   occupancyBlocks = [rentBlock, doctorBlock, staffBlock];
 
-  costWrap.append(
-    inputBlock("保守メンテナンス","",state.cost.maintenance,v=>{state.cost.maintenance=v;render();}),
-    inputBlock("消耗品","(バイトビニール・手袋・アルコール)",state.cost.consumables,v=>{state.cost.consumables=v;render();}),
-    inputBlock("電気代","CT稼働分のみ想定",state.cost.electricity,v=>{state.cost.electricity=v;render();}),
-    rentBlock,
-    doctorBlock,
-    staffBlock,
-    inputBlock("その他費用","通信費・雑費など",state.cost.other,v=>{state.cost.other=v;render();})
-  );
+costWrap.append(
+  inputBlock("Обслуживание и поддержка","",state.cost.maintenance,v=>{state.cost.maintenance=v;render();}),
+  inputBlock("Расходные материалы","(одноразовая пленка, перчатки, спирт)",state.cost.consumables,v=>{state.cost.consumables=v;render();}),
+  inputBlock("Электричество","Учёт только для работы КТ",state.cost.electricity,v=>{state.cost.electricity=v;render();}),
+  rentBlock,
+  doctorBlock,
+  staffBlock,
+  inputBlock("Прочие расходы","Связь, мелкие расходы и др.",state.cost.other,v=>{state.cost.other=v;render();})
+);
 
   const eq = $("equipmentPrice");
   eq.value = formatNumber(state.equipmentPrice);
@@ -393,5 +403,3 @@ function init() {
 }
 
 init();
-
-
